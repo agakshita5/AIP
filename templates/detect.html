@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Detect Attacks | Adversarial Shield{% endblock %}
+
+{% block content %}
+<div class="tool-container">
+    <h2><i class="fas fa-search"></i> Detect Adversarial Attacks</h2>
+    <p class="subtitle">Analyze images for potential adversarial perturbations</p>
+    
+    <div class="upload-section">
+        <div class="upload-box" id="uploadBox">
+            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+            <p>Drag & drop an image or click to browse</p>
+            <input type="file" id="imageUpload" accept="image/*">
+        </div>
+        <div class="upload-preview" id="uploadPreview">
+            <img id="previewImage" class="preview-image">
+            <div class="preview-overlay">
+                <button class="btn-clear" id="clearPreview"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-process" id="detectBtn">
+        <i class="fas fa-search"></i> Analyze Image
+    </button>
+
+    <div class="results" id="results">
+        <div class="detection-result">
+            <h3>Detection Results</h3>
+            
+            <div class="result-metric">
+                <div class="metric-label">Adversarial Score:</div>
+                <div class="metric-value" id="adversarialScore">-</div>
+                <div class="metric-bar">
+                    <div class="metric-fill" id="adversarialBar"></div>
+                </div>
+            </div>
+            
+            <div class="verdict-container">
+                <div class="verdict" id="verdict">
+                    <i class="fas fa-question-circle verdict-icon"></i>
+                    <div class="verdict-text">Upload an image to analyze</div>
+                </div>
+            </div>
+            
+            <div class="analysis-details">
+                <h4>Analysis Details</h4>
+                <div class="detail-grid">
+                    <div class="detail-card">
+                        <div class="detail-title">Laplacian Variance</div>
+                        <div class="detail-value" id="laplacianVar">-</div>
+                        <div class="detail-desc">Measures high-frequency noise</div>
+                    </div>
+                    
+                    <div class="detail-card">
+                        <div class="detail-title">Feature Inconsistency</div>
+                        <div class="detail-value" id="featureInconsistency">-</div>
+                        <div class="detail-desc">Deviation from natural features</div>
+                    </div>
+                    
+                    <div class="detail-card">
+                        <div class="detail-title">Prediction Confidence</div>
+                        <div class="detail-value" id="predictionConfidence">-</div>
+                        <div class="detail-desc">Model's certainty in prediction</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="visual-analysis">
+            <h3>Visual Analysis</h3>
+            <div class="visual-row">
+                <div class="visual-card">
+                    <img id="frequencyImage" class="visual-image">
+                    <div class="visual-label">Frequency Analysis</div>
+                </div>
+                
+                <div class="visual-card">
+                    <img id="gradientImage" class="visual-image">
+                    <div class="visual-label">Gradient Visualization</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Analyzing image for adversarial perturbations...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // File upload handling
+    const uploadBox = $('#uploadBox');
+    const uploadPreview = $('#uploadPreview');
+    const previewImage = $('#previewImage');
+    const clearPreview = $('#clearPreview');
+    const fileInput = $('#imageUpload');
+    
+    uploadBox.on('click', function() {
+        fileInput.click();
+    });
+    
+    fileInput.on('change', function(e) {
+        if (e.target.files.length) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                previewImage.attr('src', event.target.result);
+                uploadBox.hide();
+                uploadPreview.fadeIn();
+            }
+            
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    clearPreview.on('click', function(e) {
+        e.stopPropagation();
+        fileInput.val('');
+        previewImage.attr('src', '');
+        uploadPreview.hide();
+        uploadBox.fadeIn();
+        $('#results').hide();
+    });
+    
+    // Detect attack
+    $('#detectBtn').on('click', function() {
+        if (!fileInput[0].files.length) {
+            alert('Please upload an image first');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('image', fileInput[0].files[0]);
+        
+        $('#loadingOverlay').fadeIn();
+        
+        $.ajax({
+            url: '/detect',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(data) {
+                // Update detection results
+                $('#adversarialScore').text(data.adversarial_score.toFixed(2));
+                $('#adversarialBar').css('width', (data.adversarial_score * 100) + '%');
+                
+                // Update verdict
+                const verdict = $('#verdict');
+                verdict.removeClass('clean suspicious adversarial');
+                
+                if (data.is_adversarial) {
+                    verdict.addClass('adversarial');
+                    verdict.find('.verdict-icon').removeClass().addClass('fas fa-exclamation-triangle verdict-icon');
+                    verdict.find('.verdict-text').text('Adversarial Attack Detected');
+                } else {
+                    verdict.addClass('clean');
+                    verdict.find('.verdict-icon').removeClass().addClass('fas fa-check-circle verdict-icon');
+                    verdict.find('.verdict-text').text('No Adversarial Perturbations Found');
+                }
+                
+                // Update analysis details
+                $('#laplacianVar').text(data.laplacian_variance.toFixed(2));
+                $('#featureInconsistency').text(data.feature_inconsistency.toFixed(2));
+                $('#predictionConfidence').text(data.prediction_confidence.toFixed(2));
+                
+                // Update visualizations
+                $('#frequencyImage').attr('src', data.frequency_analysis);
+                $('#gradientImage').attr('src', data.gradient_visualization);
+                
+                $('#results').fadeIn();
+                $('#loadingOverlay').fadeOut();
+            },
+            error: function(xhr) {
+                alert('Error: ' + xhr.responseJSON.error);
+                $('#loadingOverlay').fadeOut();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

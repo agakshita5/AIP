@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Defend Models | Adversarial Shield{% endblock %}
+
+{% block content %}
+<div class="tool-container">
+    <h2><i class="fas fa-shield-alt"></i> Defend Against Attacks</h2>
+    <p class="subtitle">Apply defensive techniques to protect your models</p>
+    
+    <div class="upload-section">
+        <div class="upload-box" id="uploadBox">
+            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+            <p>Drag & drop an image or click to browse</p>
+            <input type="file" id="imageUpload" accept="image/*">
+        </div>
+        <div class="upload-preview" id="uploadPreview">
+            <img id="previewImage" class="preview-image">
+            <div class="preview-overlay">
+                <button class="btn-clear" id="clearPreview"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="defense-controls">
+        <h3>Defense Techniques</h3>
+        
+        <div class="defense-options">
+            <div class="defense-option">
+                <input type="checkbox" id="gaussianBlur" checked>
+                <label for="gaussianBlur">Gaussian Blur</label>
+            </div>
+            
+            <div class="defense-option">
+                <input type="checkbox" id="quantization" checked>
+                <label for="quantization">Quantization</label>
+            </div>
+            
+            <div class="defense-option">
+                <input type="checkbox" id="featureSqueezing" checked>
+                <label for="featureSqueezing">Feature Squeezing</label>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-process" id="defendBtn">
+        <i class="fas fa-shield-alt"></i> Apply Defenses
+    </button>
+
+    <div class="results" id="results">
+        <div class="result-row">
+            <div class="result-card">
+                <h3>Original Image</h3>
+                <img id="originalImage" class="result-image">
+                <div class="result-info">
+                    <h4>Model Prediction</h4>
+                    <p id="originalPrediction">-</p>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h3>Adversarial Image</h3>
+                <img id="adversarialImage" class="result-image">
+                <div class="result-info">
+                    <h4>Model Prediction</h4>
+                    <p id="adversarialPrediction">-</p>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h3>Defended Image</h3>
+                <img id="defendedImage" class="result-image">
+                <div class="result-info">
+                    <h4>Model Prediction</h4>
+                    <p id="defendedPrediction">-</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="defense-effectiveness">
+            <h3>Defense Effectiveness</h3>
+            <div class="effectiveness-metrics">
+                <div class="metric">
+                    <div class="metric-label">Attack Success Rate:</div>
+                    <div class="metric-value" id="attackSuccessRate">-</div>
+                </div>
+                
+                <div class="metric">
+                    <div class="metric-label">Defense Success Rate:</div>
+                    <div class="metric-value" id="defenseSuccessRate">-</div>
+                </div>
+                
+                <div class="metric">
+                    <div class="metric-label">PSNR (Quality):</div>
+                    <div class="metric-value" id="psnrValue">-</div>
+                </div>
+            </div>
+            
+            <div class="confidence-chart">
+                <canvas id="confidenceChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Applying defensive techniques...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // File upload handling
+    const uploadBox = $('#uploadBox');
+    const uploadPreview = $('#uploadPreview');
+    const previewImage = $('#previewImage');
+    const clearPreview = $('#clearPreview');
+    const fileInput = $('#imageUpload');
+    
+    uploadBox.on('click', function() {
+        fileInput.click();
+    });
+    
+    fileInput.on('change', function(e) {
+        if (e.target.files.length) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                previewImage.attr('src', event.target.result);
+                uploadBox.hide();
+                uploadPreview.fadeIn();
+            }
+            
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    clearPreview.on('click', function(e) {
+        e.stopPropagation();
+        fileInput.val('');
+        previewImage.attr('src', '');
+        uploadPreview.hide();
+        uploadBox.fadeIn();
+        $('#results').hide();
+    });
+    
+    // Defend against attack
+    $('#defendBtn').on('click', function() {
+        if (!fileInput[0].files.length) {
+            alert('Please upload an image first');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('image', fileInput[0].files[0]);
+        formData.append('gaussian_blur', $('#gaussianBlur').is(':checked'));
+        formData.append('quantization', $('#quantization').is(':checked'));
+        formData.append('feature_squeezing', $('#featureSqueezing').is(':checked'));
+        
+        $('#loadingOverlay').fadeIn();
+        
+        $.ajax({
+            url: '/defend',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(data) {
+                // Update images
+                $('#originalImage').attr('src', data.original_image);
+                $('#adversarialImage').attr('src', data.adversarial_image);
+                $('#defendedImage').attr('src', data.defended_image);
+                
+                // Update predictions
+                $('#originalPrediction').text(data.original_prediction);
+                $('#adversarialPrediction').text(data.adversarial_prediction);
+                $('#defendedPrediction').text(data.defended_prediction);
+                
+                // Update metrics
+                $('#attackSuccessRate').text(data.attack_success_rate + '%');
+                $('#defenseSuccessRate').text(data.defense_success_rate + '%');
+                $('#psnrValue').text(data.psnr + ' dB');
+                
+                // Update chart
+                updateConfidenceChart(data.confidence_data);
+                
+                $('#results').fadeIn();
+                $('#loadingOverlay').fadeOut();
+            },
+            error: function(xhr) {
+                alert('Error: ' + xhr.responseJSON.error);
+                $('#loadingOverlay').fadeOut();
+            }
+        });
+    });
+    
+    function updateConfidenceChart(data) {
+        const ctx = document.getElementById('confidenceChart').getContext('2d');
+        
+        if (window.confidenceChart) {
+            window.confidenceChart.destroy();
+        }
+        
+        window.confidenceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Original', 'Adversarial', 'Defended'],
+                datasets: [{
+                    label: 'Top Prediction Confidence',
+                    data: [data.original, data.adversarial, data.defended],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(75, 192, 192, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(75, 192, 192, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 1
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

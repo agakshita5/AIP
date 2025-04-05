@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Attacks | Adversarial Shield{% endblock %}
+
+{% block content %}
+<div class="tool-container">
+    <h2><i class="fas fa-code"></i> Generate Adversarial Attacks</h2>
+    <p class="subtitle">Create adversarial examples using Fast Gradient Sign Method (FGSM)</p>
+    
+    <div class="upload-section">
+        <div class="upload-box" id="uploadBox">
+            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+            <p>Drag & drop an image or click to browse</p>
+            <input type="file" id="imageUpload" accept="image/*">
+        </div>
+        <div class="upload-preview" id="uploadPreview">
+            <img id="previewImage" class="preview-image">
+            <div class="preview-overlay">
+                <button class="btn-clear" id="clearPreview"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="epsilon">Attack Strength (ε):</label>
+            <input type="range" id="epsilon" min="0.01" max="0.1" step="0.01" value="0.04">
+            <span id="epsilonValue">0.04</span>
+        </div>
+        
+        <button class="btn-process" id="generateBtn">
+            <i class="fas fa-bolt"></i> Generate Attack
+        </button>
+    </div>
+
+    <div class="results" id="results">
+        <div class="result-row">
+            <div class="result-card">
+                <h3>Original Image</h3>
+                <img id="originalImage" class="result-image">
+                <div class="result-info">
+                    <h4>Model Prediction</h4>
+                    <p id="originalPrediction">-</p>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h3>Adversarial Image</h3>
+                <img id="adversarialImage" class="result-image">
+                <div class="result-info">
+                    <h4>Model Prediction</h4>
+                    <p id="adversarialPrediction">-</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="difference-visualization">
+            <h3>Perturbation Visualization</h3>
+            <div class="difference-container">
+                <img id="differenceImage" class="difference-image">
+                <div class="difference-legend">
+                    <span>Minimal</span>
+                    <div class="legend-gradient"></div>
+                    <span>Significant</span>
+                </div>
+            </div>
+            <p class="difference-info">This shows the amplified difference between original and adversarial images</p>
+        </div>
+    </div>
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Generating adversarial example...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // File upload handling
+    const uploadBox = $('#uploadBox');
+    const uploadPreview = $('#uploadPreview');
+    const previewImage = $('#previewImage');
+    const clearPreview = $('#clearPreview');
+    const fileInput = $('#imageUpload');
+    
+    uploadBox.on('click', function() {
+        fileInput.click();
+    });
+    
+    fileInput.on('change', function(e) {
+        if (e.target.files.length) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                previewImage.attr('src', event.target.result);
+                uploadBox.hide();
+                uploadPreview.fadeIn();
+            }
+            
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    clearPreview.on('click', function(e) {
+        e.stopPropagation();
+        fileInput.val('');
+        previewImage.attr('src', '');
+        uploadPreview.hide();
+        uploadBox.fadeIn();
+        $('#results').hide();
+    });
+    
+    // Epsilon slider
+    const epsilonSlider = $('#epsilon');
+    const epsilonValue = $('#epsilonValue');
+    
+    epsilonSlider.on('input', function() {
+        epsilonValue.text($(this).val());
+    });
+    
+    // Generate attack
+    $('#generateBtn').on('click', function() {
+        if (!fileInput[0].files.length) {
+            alert('Please upload an image first');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('image', fileInput[0].files[0]);
+        formData.append('epsilon', epsilonSlider.val());
+        
+        $('#loadingOverlay').fadeIn();
+        
+        $.ajax({
+            url: '/generate',
+            type: 'POST',
+            data: formData,
+            contentType: false,
+            processData: false,
+            success: function(data) {
+                $('#originalImage').attr('src', data.original_image);
+                $('#adversarialImage').attr('src', data.adversarial_image);
+                $('#differenceImage').attr('src', data.difference_image);
+                
+                $('#originalPrediction').text(data.original_prediction);
+                $('#adversarialPrediction').text(data.adversarial_prediction);
+                
+                $('#results').fadeIn();
+                $('#loadingOverlay').fadeOut();
+            },
+            error: function(xhr) {
+                alert('Error: ' + xhr.responseJSON.error);
+                $('#loadingOverlay').fadeOut();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
