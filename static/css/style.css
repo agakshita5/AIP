@@ -48,36 +48,30 @@ body {
 
 .logo {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    margin-bottom: 20px;
-    position: relative;
-}
-
-.logo-shield {
-    font-size: 3rem;
-    color: var(--light-blue);
-    position: relative;
-}
-
-.logo-robot {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.5rem;
-    color: var(--pale-yellow);
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 10px; 
+    gap: 15px;
+    text-decoration: none;
 }
 
 .logo-img {
-    height: 40px; 
+    height: 50px; /* Increased size for better visibility */
     width: auto;
+    transition: transform 0.3s ease;
+}
+
+.logo:hover .logo-img {
+    transform: scale(1.05); /* Subtle hover effect */
+}
+
+.logo h1 {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(to right, var(--light-blue), var(--pale-yellow));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 
