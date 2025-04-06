@@ -1,4 +1,3 @@
-// Initialize particles.js background
 document.addEventListener('DOMContentLoaded', function() {
     particlesJS('particles-js', {
         "particles": {
@@ -98,7 +97,6 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#currentYear').text(new Date().getFullYear());
 });
 
-// Common file upload functionality
 function setupFileUpload(uploadBoxId, previewId, clearBtnId, fileInputId) {
     const uploadBox = $(`#${uploadBoxId}`);
     const uploadPreview = $(`#${previewId}`);
@@ -106,7 +104,6 @@ function setupFileUpload(uploadBoxId, previewId, clearBtnId, fileInputId) {
     const clearPreview = $(`#${clearBtnId}`);
     const fileInput = $(`#${fileInputId}`);
 
-    // Handle drag and drop
     uploadBox.on('dragover', function(e) {
         e.preventDefault();
         $(this).addClass('dragover');
@@ -126,19 +123,18 @@ function setupFileUpload(uploadBoxId, previewId, clearBtnId, fileInputId) {
         }
     });
 
-    // Handle click to browse
-    uploadBox.on('click', function() {
-        fileInput.click();
+    uploadBox.on('click', function(e) {
+        if (e.target === this) { 
+            fileInput[0].click(); 
+        }
     });
 
-    // Handle file selection
     fileInput.on('change', function(e) {
         if (e.target.files.length) {
             displayPreview(e.target.files[0]);
         }
     });
 
-    // Handle clear preview
     clearPreview.on('click', function(e) {
         e.stopPropagation();
         fileInput.val('');
@@ -163,16 +159,13 @@ function setupFileUpload(uploadBoxId, previewId, clearBtnId, fileInputId) {
     }
 }
 
-// Generate Page Specific Functions
 function initGeneratePage() {
     setupFileUpload('uploadBox', 'uploadPreview', 'clearPreview', 'imageUpload');
 
-    // Epsilon slider
     $('#epsilon').on('input', function() {
         $('#epsilonValue').text($(this).val());
     });
 
-    // Generate attack button
     $('#generateBtn').on('click', function() {
         const fileInput = $('#imageUpload')[0];
         if (!fileInput.files.length) {
@@ -211,11 +204,9 @@ function initGeneratePage() {
     });
 }
 
-// Detect Page Specific Functions
 function initDetectPage() {
     setupFileUpload('uploadBox', 'uploadPreview', 'clearPreview', 'imageUpload');
 
-    // Detect attack button
     $('#detectBtn').on('click', function() {
         const fileInput = $('#imageUpload')[0];
         if (!fileInput.files.length) {
@@ -235,11 +226,11 @@ function initDetectPage() {
             contentType: false,
             processData: false,
             success: function(data) {
-                // Convert boolean to string if needed
+                
                 $('#adversarialScore').text(data.adversarial_score.toFixed(2));
                 $('#adversarialBar').css('width', (data.adversarial_score * 100) + '%');
                 
-                // Update verdict
+   
                 const verdict = $('#verdict');
                 verdict.removeClass('clean suspicious adversarial');
                 
@@ -252,13 +243,11 @@ function initDetectPage() {
                     verdict.find('.verdict-icon').removeClass().addClass('fas fa-check-circle verdict-icon');
                     verdict.find('.verdict-text').text('No Adversarial Perturbations Found');
                 }
-                
-                // Update analysis details
+      
                 $('#laplacianVar').text(data.laplacian_variance.toFixed(2));
                 $('#featureInconsistency').text(data.feature_inconsistency.toFixed(2));
                 $('#predictionConfidence').text(data.prediction_confidence.toFixed(2));
                 
-                // Update visualizations
                 $('#frequencyImage').attr('src', data.frequency_analysis);
                 $('#gradientImage').attr('src', data.gradient_visualization);
                 
@@ -273,25 +262,62 @@ function initDetectPage() {
     });
 }
 
-// Defend Page Specific Functions
-function initDefendPage() {
-    setupFileUpload('uploadBox', 'uploadPreview', 'clearPreview', 'imageUpload');
 
-    // Defend button
-    $('#defendBtn').on('click', function() {
-        const fileInput = $('#imageUpload')[0];
-        if (!fileInput.files.length) {
-            alert('Please upload an image first');
+function initDefendPage() {
+    
+    const uploadBox = $('#uploadBox');
+    const uploadPreview = $('#uploadPreview');
+    const previewImage = $('#previewImage');
+    const clearPreview = $('#clearPreview');
+    const fileInput = $('#imageUpload');
+    const defendBtn = $('#defendBtn');
+    
+    uploadBox.on('click', function(e) {
+        if (e.target === this) { 
+            fileInput[0].click();
+        }
+    });
+    
+    fileInput.on('change', function(e) {
+        if (e.target.files.length) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                previewImage.attr('src', event.target.result);
+                uploadBox.hide();
+                uploadPreview.fadeIn();
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+    
+    clearPreview.on('click', function(e) {
+        e.stopPropagation();
+        fileInput.val('');
+        previewImage.attr('src', '');
+        uploadPreview.hide();
+        uploadBox.fadeIn();
+        $('#results').hide();
+    });
+
+    defendBtn.off('click').on('click', function() {
+        console.log("Defend button clicked");
+        
+        if (!fileInput[0].files.length) {
+            console.log("No file selected");
+            alert('Please upload a perturbed image first');
             return;
         }
 
-        const formData = new FormData();
-        formData.append('image', fileInput.files[0]);
-        formData.append('gaussian_blur', $('#gaussianBlur').is(':checked'));
-        formData.append('quantization', $('#quantization').is(':checked'));
-        formData.append('feature_squeezing', $('#featureSqueezing').is(':checked'));
+        const btn = $(this);
+        btn.prop('disabled', true).html(
+            '<i class="fas fa-spinner fa-spin"></i> Processing...'
+        );
 
         $('#loadingOverlay').fadeIn();
+        $('#results').hide();
+
+        const formData = new FormData();
+        formData.append('image', fileInput[0].files[0]);
 
         $.ajax({
             url: '/defend',
@@ -300,76 +326,42 @@ function initDefendPage() {
             contentType: false,
             processData: false,
             success: function(data) {
-                // Update images
-                $('#originalImage').attr('src', data.original_image);
-                $('#adversarialImage').attr('src', data.adversarial_image);
-                $('#defendedImage').attr('src', data.defended_image);
-                
-                // Update predictions
-                $('#originalPrediction').text(data.original_prediction);
-                $('#adversarialPrediction').text(data.adversarial_prediction);
-                $('#defendedPrediction').text(data.defended_prediction);
-                
-                // Update metrics
-                $('#attackSuccessRate').text(data.attack_success_rate + '%');
-                $('#defenseSuccessRate').text(data.defense_success_rate + '%');
-                $('#psnrValue').text(data.psnr + ' dB');
-                
-                // Update chart
-                updateConfidenceChart(data.confidence_data);
-                
-                $('#results').fadeIn();
-                $('#loadingOverlay').fadeOut();
+                console.log("Success:", data);
+                if (data.success) {
+                    $('#perturbedImage').attr('src', data.perturbed_image);
+                    $('#defendedImage').attr('src', data.defended_image);
+                    
+                    // Format predictions
+                    function formatPreds(pred) {
+                        return Object.entries(pred)
+                            .map(([label, prob]) => `${label} (${(prob * 100).toFixed(1)}%)`)
+                            .join(', ');
+                    }
+                    
+                    $('#perturbedPred').text(formatPreds(data.perturbed_pred));
+                    $('#defendedPred').text(formatPreds(data.defended_pred));
+                    
+                    $('#results').fadeIn();
+                } else {
+                    alert('Error: ' + (data.error || 'Processing failed'));
+                }
             },
             error: function(xhr) {
-                alert('Error: ' + xhr.responseJSON.error);
+                console.error("Error:", xhr.responseText);
+                alert('Server error occurred');
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(
+                    '<i class="fas fa-shield-alt"></i> Defend Image'
+                );
                 $('#loadingOverlay').fadeOut();
             }
         });
     });
-
-    function updateConfidenceChart(data) {
-        const ctx = document.getElementById('confidenceChart').getContext('2d');
-        
-        if (window.confidenceChart) {
-            window.confidenceChart.destroy();
-        }
-        
-        window.confidenceChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Original', 'Adversarial', 'Defended'],
-                datasets: [{
-                    label: 'Top Prediction Confidence',
-                    data: [data.original, data.adversarial, data.defended],
-                    backgroundColor: [
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(75, 192, 192, 0.7)'
-                    ],
-                    borderColor: [
-                        'rgba(54, 162, 235, 1)',
-                        'rgba(255, 99, 132, 1)',
-                        'rgba(75, 192, 192, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 1
-                    }
-                }
-            }
-        });
-    }
 }
 
-// Initialize page-specific functions based on current page
 $(document).ready(function() {
+    const fileInput = $('#imageUpload'); // debugging line
     const path = window.location.pathname;
     
     if (path.endsWith('/generate') || path.endsWith('/generate/')) {
@@ -382,7 +374,6 @@ $(document).ready(function() {
         initDefendPage();
     }
     
-    // Smooth scrolling for anchor links
     $('a[href^="#"]').on('click', function(event) {
         event.preventDefault();
         $('html, body').animate({
@@ -390,7 +381,6 @@ $(document).ready(function() {
         }, 500);
     });
     
-    // Mobile menu toggle
     $('#mobileMenuToggle').on('click', function() {
         $('#navLinks').toggleClass('active');
     });
