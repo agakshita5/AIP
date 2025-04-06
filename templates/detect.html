@@ -94,7 +94,6 @@
 {% block scripts %}
 <script>
 $(document).ready(function() {
-    // File upload handling
     const uploadBox = $('#uploadBox');
     const uploadPreview = $('#uploadPreview');
     const previewImage = $('#previewImage');
@@ -166,12 +165,11 @@ $(document).ready(function() {
                     verdict.find('.verdict-text').text('No Adversarial Perturbations Found');
                 }
                 
-                // Update analysis details
                 $('#laplacianVar').text(data.laplacian_variance.toFixed(2));
                 $('#featureInconsistency').text(data.feature_inconsistency.toFixed(2));
                 $('#predictionConfidence').text(data.prediction_confidence.toFixed(2));
                 
-                // Update visualizations
+
                 $('#frequencyImage').attr('src', data.frequency_analysis);
                 $('#gradientImage').attr('src', data.gradient_visualization);
                 
