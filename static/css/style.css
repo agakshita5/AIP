@@ -69,6 +69,18 @@ body {
     color: var(--pale-yellow);
 }
 
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px; 
+}
+
+.logo-img {
+    height: 40px; 
+    width: auto;
+}
+
+
 h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
     margin-top: 0;
@@ -697,7 +709,7 @@ h3 {
     color: white;
 }
 
-/* Responsive adjustments */
+
 @media (max-width: 768px) {
     .header {
         padding: 15px 0;
@@ -739,4 +751,110 @@ h3 {
     .control-group input[type="range"] {
         width: 100%;
     }
+}
+
+
+.processing-info {
+    background-color: rgba(0, 20, 40, 0.5);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 20px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.processing-info i {
+    color: var(--light-blue);
+    margin-right: 8px;
+}
+
+.btn-process[disabled] {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+#defendBtn {
+    background: linear-gradient(135deg, var(--light-blue), #2a5885);
+}
+
+
+.upload-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.upload-box {
+    border: 2px dashed #fff;
+    border-radius: 10px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.upload-box:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.upload-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: #75AADB;
+}
+
+.upload-text {
+    font-size: 16px;
+    color: #fff;
+    margin: 0;
+}
+
+.results-container {
+    margin-top: 30px;
+}
+
+.result-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 20px;
+    height: 100%;
+}
+
+.result-image {
+    width: 100%;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.predictions {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.predictions {
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 5px;
+}
+
+.pred-item {
+    display: block;
+    margin: 5px 0;
+    padding: 5px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+}
+
+.pred-item strong {
+    color: #75AADB;
+    float: right;
 }
